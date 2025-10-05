@@ -88,6 +88,47 @@ class TicTacToeGUI:
             # keep UI responsive
             self.clock.tick(30)
 
+    def wait_for_end(self, board: np.ndarray, msg: str):
+        """Show final board with a centered message and wait for click/ESC."""
+        self.screen.fill((240, 240, 240))
+        # draw final board
+        for r in range(GRID_SIZE):
+            for c in range(GRID_SIZE):
+                x = MARGIN + c * CELL_SIZE
+                y = MARGIN + r * CELL_SIZE
+                rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(self.screen, (255, 255, 255), rect)
+                pygame.draw.rect(self.screen, (0, 0, 0), rect, 2)
+
+                v = int(board[r, c])
+                if v == 1:
+                    pygame.draw.line(self.screen, (200, 30, 30), (x + 16, y + 16), (x + CELL_SIZE - 16, y + CELL_SIZE - 16), 6)
+                    pygame.draw.line(self.screen, (200, 30, 30), (x + CELL_SIZE - 16, y + 16), (x + 16, y + CELL_SIZE - 16), 6)
+                elif v == 2:
+                    center = (x + CELL_SIZE // 2, y + CELL_SIZE // 2)
+                    pygame.draw.circle(self.screen, (30, 30, 200), center, CELL_SIZE // 2 - 16, 6)
+
+        # render centered message
+        text_surf = self.font.render(msg, True, (0, 0, 0))
+        text_rect = text_surf.get_rect(center=(WINDOW_W // 2, WINDOW_H // 2))
+        self.screen.blit(text_surf, text_rect)
+
+        pygame.display.flip()
+
+        # wait for input
+        while True:
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit(0)
+                elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit(0)
+                elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                    return
+            self.clock.tick(30)
+
+
     def show_message(self, msg: str, board: np.ndarray = None, pause: float = 0.0):
         self.status = msg
         if board is not None:

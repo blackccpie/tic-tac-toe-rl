@@ -31,18 +31,21 @@ def prompt_yes_no(prompt: str, default: bool = False) -> bool:
 
 
 def play_sdl(model_path: str = "ppo_tictactoe.zip"):
+    # Ask who plays first
     try:
         human_first = prompt_yes_no("Do you want to play first? (y/N):", default=False)
     except KeyboardInterrupt:
-        print('Interrupted. Goodbye.')
+        print('\nInterrupted. Goodbye.')
         sys.exit(0)
 
+    # Ask whether to use deterministic actions
     try:
         deterministic = prompt_yes_no("Use deterministic agent actions? (Y/n):", default=True)
     except KeyboardInterrupt:
-        print('Interrupted. Goodbye.')
+        print('\nInterrupted. Goodbye.')
         sys.exit(0)
 
+    # Load trained PPO model
     try:
         model = PPO.load(model_path, device="cpu")
     except Exception as e:
@@ -51,23 +54,25 @@ def play_sdl(model_path: str = "ppo_tictactoe.zip"):
 
     gui = TicTacToeGUI("Tic-Tac-Toe (PPO)")
 
-    # human policy that blocks waiting for GUI click
+    # Human plays via GUI click
     def human_policy(board: np.ndarray) -> int:
         return gui.wait_for_click(board, prompt="Your move (click an empty square)")
 
+    # Agent policy using PPO
     def agent_policy_from_model(board: np.ndarray) -> int:
         obs_vec = board.ravel().astype(np.float32)
         a, _ = model.predict(obs_vec, deterministic=deterministic)
         return int(a)
 
+    # Choose environment opponent depending on who plays first
     if human_first:
         env = TicTacToeEnv(opponent_policy=agent_policy_from_model)
     else:
         env = TicTacToeEnv(opponent_policy=human_policy)
 
-    # handle ctrl-c from console
+    # Handle Ctrl-C globally
     def _sigint_handler(sig, frame):
-        print('Received interrupt. Exiting...')
+        print('\nReceived interrupt. Exiting...')
         gui.close()
         sys.exit(0)
 
@@ -76,77 +81,55 @@ def play_sdl(model_path: str = "ppo_tictactoe.zip"):
     try:
         while True:
             obs, _ = env.reset()
+            
+            # === Splash before the game starts ===
             if human_first:
-                gui.show_message('New game — you play X (first).', board=obs)
+                gui.wait_for_end(obs, 'New game — you are X (first)')
             else:
-                gui.show_message('New game — you play O (second).', board=obs)
+                gui.wait_for_end(obs, 'New game — you are O (second)')
 
             done = False
             while not done:
                 if human_first:
-                    # human is agent (X) -> they click, then env.step will call agent model as opponent
-                    try:
-                        a = human_policy(obs)
-                    except SystemExit:
-                        gui.close()
-                        raise
-                    except KeyboardInterrupt:
-                        gui.close()
-                        raise
-
+                    # Human turn
+                    a = human_policy(obs)
                     obs, reward, terminated, truncated, info = env.step(int(a))
-                    gui.show_message('Move played', board=obs)
+                    gui.draw_board(obs)
 
                     if terminated or truncated:
                         if reward == env.win_reward:
-                            gui.show_message('You (X) win!', board=obs)
+                            msg = 'You (X) win!'
                         elif reward == env.loss_reward:
-                            gui.show_message('Agent (O) wins!', board=obs)
+                            msg = 'Agent (O) wins!'
                         else:
-                            gui.show_message('Draw!', board=obs)
-                        gui.show_message('Press any key or close window to continue', board=obs)
-                        # wait a moment then break
-                        gui.wait_for_click(obs, prompt='Click to continue')
+                            msg = 'Draw!'
+                        gui.wait_for_end(obs, msg)
                         done = True
                         break
-
-                    # opponent_action present
-                    if info.get('opponent_action') is not None:
-                        gui.show_message(f"Agent (O) played: {info['opponent_action']}", board=obs)
 
                 else:
-                    # agent X plays first
+                    # Agent turn
                     obs_vec = obs.ravel().astype(np.float32)
                     action, _ = model.predict(obs_vec, deterministic=deterministic)
-                    action = int(action)
-                    obs, reward, terminated, truncated, info = env.step(action)
-                    gui.show_message(f"Agent (X) plays: {action}", board=obs)
+                    obs, reward, terminated, truncated, info = env.step(int(action))
+                    gui.draw_board(obs)
 
                     if terminated or truncated:
                         if reward == env.win_reward:
-                            gui.show_message('Agent (X) wins!', board=obs)
+                            msg = 'Agent (X) wins!'
                         elif reward == env.loss_reward:
-                            gui.show_message('You (O) win!', board=obs)
+                            msg = 'You (O) win!'
                         else:
-                            gui.show_message('Draw!', board=obs)
-                        gui.wait_for_click(obs, prompt='Click to continue')
+                            msg = 'Draw!'
+                        gui.wait_for_end(obs, msg)
                         done = True
                         break
 
-                    if info.get('opponent_action') is not None:
-                        gui.show_message(f"You (O) played: {info['opponent_action']}", board=obs)
-
-            # ask whether to play again via terminal prompt
-            try:
-                again = prompt_yes_no("Play again? (y/N):", default=False)
-            except KeyboardInterrupt:
-                print('Exiting.')
-                break
-            if not again:
-                break
+            # After game ends, loop continues for new game
+            # User can quit with ESC or window close in wait_for_end
 
     except KeyboardInterrupt:
-        print('Interrupted by user. Goodbye.')
+        print('\nInterrupted by user. Goodbye.')
     finally:
         gui.close()
 
