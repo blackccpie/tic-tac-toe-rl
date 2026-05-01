@@ -122,20 +122,24 @@ class TicTacToeEnv(gym.Env):
                     extra += self.attack_reward
                     break
 
-        # Defense: did this move block opponent’s imminent win?
+        # Defense: did this move block opponent's imminent win?
         opponent = 2 if player == 1 else 1
-        # Check opponent winning chances before the move
+        # Temporarily remove our move to see board state before we played
         board_before = self.board.copy()
         board_before[r, c] = 0
-        imminent = []
+        
+        # Find all lines where opponent had 2 marks and 1 empty (their winning threat)
         for line in self.winning_lines:
             marks = [board_before[r_, c_] for r_, c_ in line]
             if marks.count(opponent) == 2 and marks.count(0) == 1:
-                imminent.append(line)
-        if imminent:
-            # If our action is in one of those imminent lines, we blocked
-            for line in imminent:
-                if (r, c) in line:
+                # Find the empty position in this line
+                empty_pos = None
+                for (lr, lc) in line:
+                    if board_before[lr, lc] == 0:
+                        empty_pos = (lr, lc)
+                        break
+                # If our move was placed at that empty position, we blocked it
+                if empty_pos == (r, c):
                     extra += self.defense_reward
                     break
 

@@ -11,23 +11,7 @@ from stable_baselines3 import PPO
 
 from tic_tac_toe_env import TicTacToeEnv
 from gui import TicTacToeGUI
-
-
-def prompt_yes_no(prompt: str, default: bool = False) -> bool:
-    while True:
-        try:
-            resp = input(f"{prompt} ")
-        except KeyboardInterrupt:
-            raise
-        except EOFError:
-            return default
-        if resp == "":
-            return default
-        if resp.lower().startswith('y'):
-            return True
-        if resp.lower().startswith('n'):
-            return False
-        print("Please answer y or n.")
+from utils import prompt_yes_no
 
 
 def play_sdl(model_path: str = "ppo_tictactoe.zip"):

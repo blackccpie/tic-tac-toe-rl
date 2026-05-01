@@ -12,23 +12,7 @@ import numpy as np
 from stable_baselines3 import PPO
 
 from tic_tac_toe_env import TicTacToeEnv
-
-INDEX_MAP = "0 1 2\n3 4 5\n6 7 8"
-
-def render_board_ascii(board: np.ndarray, show_indices: bool = False) -> str:
-    chars = {0: '.', 1: 'X', 2: 'O'}
-    lines = []
-    sep = '+---+---+---+'
-    lines.append(sep)
-    for r in range(3):
-        row = board[r]
-        lines.append('| ' + ' | '.join(chars[int(x)] for x in row) + ' |')
-        lines.append(sep)
-
-    out = '\n'.join(lines)
-    if show_indices:
-        out = out + '|\n\nIndices:\n' + INDEX_MAP
-    return out
+from utils import prompt_yes_no, render_board_ascii
 
 def human_opponent_policy_factory():
     def human_policy(board: np.ndarray) -> int:
@@ -62,28 +46,6 @@ def human_opponent_policy_factory():
                 print("Invalid input. Enter a number 0..8 or 1..9.")
 
     return human_policy
-
-def prompt_yes_no(prompt: str, default: bool = False) -> bool:
-    """Ask a simple yes/no question on the terminal. Returns True for yes.
-
-    default=False means Enter or blank yields No.
-    Handles KeyboardInterrupt by re-raising so caller can exit.
-    """
-    while True:
-        try:
-            resp = input(f"{prompt} ")
-        except KeyboardInterrupt:
-            raise
-        except EOFError:
-            # treat EOF as No / cancel
-            return default
-        if resp == "":
-            return default
-        if resp.lower().startswith('y'):
-            return True
-        if resp.lower().startswith('n'):
-            return False
-        print("Please answer y or n.")
 
 
 def play_with_model(model_path: str = "ppo_tictactoe.zip"):

@@ -5,7 +5,7 @@ Requirements:
     pip install stable-baselines3 gymnasium
 
 Notes:
-- Uses a small MLP policy. Observations are flattened to 9 floats.
+- Uses a small MLP policy. Observations are flattened and normalized to [0, 1].
 - Trains against the environment's default opponent (random).
 - Saves model to `ppo_tictactoe.zip` and a sample evaluation summary `ppo_eval.txt`.
 """
@@ -17,7 +17,6 @@ import numpy as np
 
 import gymnasium as gym
 from gymnasium import spaces
-from gymnasium.wrappers import TransformObservation
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -25,20 +24,25 @@ from stable_baselines3.common.env_checker import check_env
 
 from tic_tac_toe_env import TicTacToeEnv
 
-class FlattenAndFloatObs(gym.ObservationWrapper):
-    """Flatten 3x3 int board to 9-d float32 vector and adjust observation_space."""
+class FlattenAndNormalizeObs(gym.ObservationWrapper):
+    """Flatten 3x3 int board to 9-d float32 vector, normalized to [0, 1].
+    
+    Board values: 0 (empty), 1 (agent/X), 2 (opponent/O)
+    Normalized: 0.0, 0.5, 1.0
+    """
 
     def __init__(self, env: gym.Env):
         super().__init__(env)
-        self.observation_space = spaces.Box(low=0.0, high=2.0, shape=(9,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(9,), dtype=np.float32)
 
     def observation(self, observation):
-        return observation.ravel().astype(np.float32)
+        # Normalize [0, 1, 2] -> [0.0, 0.5, 1.0]
+        return (observation.ravel() / 2.0).astype(np.float32)
 
 def make_wrapped_env() -> Callable[[], gym.Env]:
     def _thunk():
         env = TicTacToeEnv()
-        env = FlattenAndFloatObs(env)
+        env = FlattenAndNormalizeObs(env)
         return env
 
     return _thunk
@@ -47,6 +51,8 @@ def evaluate_model(model: PPO, env: gym.Env, episodes: int = 500):
     """
     Evaluate a trained model against the (possibly wrapped) env.
     Uses env.unwrapped (when available) to read reward constants like win_reward.
+    
+    Note: obs is already flattened and normalized by FlattenAndNormalizeObs wrapper.
     """
     base_env = getattr(env, "unwrapped", env)  # unwrap if wrapped
     wins = draws = losses = 0
@@ -54,9 +60,8 @@ def evaluate_model(model: PPO, env: gym.Env, episodes: int = 500):
         obs, _ = env.reset()
         done = False
         while not done:
-            # ensure the observation is the same flattened float32 vector used in training
-            obs_vec = obs.ravel().astype(np.float32) if isinstance(obs, np.ndarray) else np.asarray(obs, dtype=np.float32)
-            action, _ = model.predict(obs_vec, deterministic=True)
+            # obs is already flattened float32 from the wrapper
+            action, _ = model.predict(obs, deterministic=True)
             obs, reward, terminated, truncated, info = env.step(int(action))
             done = terminated or truncated
 
