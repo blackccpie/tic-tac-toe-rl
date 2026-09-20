@@ -1,0 +1,4 @@
+Eval matrix (W/D/L, illegal moves) — agent-first / opponent-first / mixed:
+  vs random     agent=259/40/1 ill=0 | opponent=184/103/13 ill=0 | random=203/90/7 ill=0
+  vs rule_l4    agent=38/262/0 ill=0 | opponent=2/277/21 ill=0 | random=22/266/12 ill=0
+  vs minimax    agent=0/300/0 ill=0 | opponent=0/300/0 ill=0 | random=0/300/0 ill=0

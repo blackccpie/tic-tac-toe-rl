@@ -1,9 +1,7 @@
 """
-Minimal SDL-based GUI for Tic-Tac-Toe using pygame (SDL wrapper).
+Minimal pygame GUI for Tic-Tac-Toe.
 Provides `TicTacToeGUI` class which can display a board and block waiting for a human click.
-
-Save as `tictactoe_sdl.py` next to other scripts.
-Requires: `pip install pygame`
+Requires: pygame (see pyproject.toml)
 """
 
 import pygame
